@@ -58,7 +58,9 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
     }
 
     currentWallet = wallets[wallets.length - 1];
-    const amount = ethers.utils.parseUnits(amountUSD, 18);
+    const decimals = token === 'USDT' || token === 'USDC' ? 6 : 18;
+    const amount = ethers.utils.parseUnits(amountUSD, decimals);
+
     const tokenAddress = token === 'USDT' 
         ? '0xdAC17F958D2ee523a2206206994597C13D831ec7'
         : '0xA0b86991c6218b36c1d19d4A2e9eb0ce3606eB48';
@@ -68,13 +70,16 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
     ], currentWallet);
 
     try {
-        const tx = await tokenContract.transfer(recipient, amount);
+        const tx = await tokenContract.transfer(recipient, amount, {
+            gasLimit: 100000
+        });
         document.getElementById('status').innerText = `${amountUSD} ${token} has been flashed to ${recipient}`;
         const txLink = document.getElementById('tx-link');
         txLink.style.display = 'inline';
         txLink.href = `https://etherscan.io/tx/${tx.hash}`;
         document.getElementById('confirmation-message').innerText = `Transaction sent with hash: ${tx.hash}`;
     } catch (err) {
+        console.error("Error during transaction:", err);
         document.getElementById('status').innerText = `Error: ${err.message}`;
     }
 });
