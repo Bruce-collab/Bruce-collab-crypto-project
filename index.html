@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Flasher</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>Crypto Flasher</h1>
+
+    <div>
+        <h3>Wallet Info</h3>
+        <label for="wallet-selector">Choose Wallet:</label>
+        <select id="wallet-selector"></select>
+        <div>Balance: <span id="balance"></span></div>
+        <div>Private Key: <span id="private-key"></span></div>
+    </div>
+
+    <div>
+        <h3>Send Flash Transaction</h3>
+        <label for="recipient">Recipient Address:</label>
+        <input type="text" id="recipient" placeholder="0x..."><br>
+
+        <label for="amount">Amount in USD:</label>
+        <input type="number" id="amount" placeholder="Amount"><br>
+
+        <label for="token-selector">Select Token:</label>
+        <select id="token-selector">
+            <option value="USDT">USDT</option>
+            <option value="USDC">USDC</option>
+        </select><br>
+
+        <button id="send-flash-btn">Send Flash Transaction</button>
+        <button id="revert-flash-btn">Force Revert Flash</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="confirmation-message"></div>
+    <div>
+        <a id="tx-link" href="" target="_blank" style="display:none;">View Transaction on Etherscan</a>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
