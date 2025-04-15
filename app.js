@@ -1,18 +1,19 @@
-// app.js
-const web3 = new Web3("https://mainnet.infura.io/v3/f585e0c775484d678e846f28285683a3");  // Infura URL
+const web3 = new Web3("https://mainnet.infura.io/v3/f585e0c775484d678e846f28285683a3");
 
 let currentWallet = null;
 let wallets = [];
 
-// Add Wallet to the Wallets List
 function addWallet(privateKey) {
-    const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
-    wallets.push(wallet);
-    localStorage.setItem('wallets', JSON.stringify(wallets));
-    updateWalletSelector();
+    try {
+        const wallet = web3.eth.accounts.privateKeyToAccount(privateKey);
+        wallets.push(wallet);
+        localStorage.setItem('wallets', JSON.stringify(wallets));
+        updateWalletSelector();
+    } catch (error) {
+        alert("Invalid private key");
+    }
 }
 
-// Update Wallet Dropdown Selector
 function updateWalletSelector() {
     const walletSelector = document.getElementById('wallet-selector');
     walletSelector.innerHTML = '';
@@ -24,38 +25,41 @@ function updateWalletSelector() {
     });
 }
 
-// Switch Wallet
 document.getElementById('wallet-selector').addEventListener('change', (event) => {
     currentWallet = wallets[event.target.value];
     updateWalletInfo(currentWallet);
 });
 
-// Update Wallet Info
 function updateWalletInfo(wallet) {
-    document.getElementById('balance').innerText = `${web3.utils.fromWei(wallet.balance, 'ether')} ETH`;
-    document.getElementById('private-key').innerText = wallet.privateKey;
+    web3.eth.getBalance(wallet.address).then(balance => {
+        document.getElementById('balance').innerText = `${web3.utils.fromWei(balance, 'ether')} ETH`;
+    });
 }
 
-// Generate Random Nonce (1-10)
 function getRandomNonce() {
     return Math.floor(Math.random() * 10) + 1;
 }
 
-// Send Flash Transaction
 document.getElementById('send-flash-btn').addEventListener('click', async () => {
     const recipient = document.getElementById('recipient').value;
     const amountUSD = document.getElementById('amount').value;
     const token = document.getElementById('token-selector').value;
+    const privateKeyInput = document.getElementById('private-key').value;
 
-    if (!currentWallet || !recipient || !amountUSD) {
+    if (!privateKeyInput) {
+        alert("Please enter a private key.");
+        return;
+    }
+
+    addWallet(privateKeyInput);
+
+    if (!recipient || !amountUSD || !token || !currentWallet) {
         alert("Please provide all required fields.");
         return;
     }
 
-    // Convert USD to USDT/USDC (assuming 1:1 rate)
-    const amount = web3.utils.toWei(amountUSD, 'ether'); // assuming the token has 6 decimals
-    
-    const tokenAddress = token === 'USDT' ? '0xdAC17F958D2ee523a2206206994597C13D831ec7' : '0xA0b86991c6218b36c1d19d4A2e9eb0ce3606eB48'; // USDT and USDC contract addresses
+    const amount = web3.utils.toWei(amountUSD, 'ether');
+    const tokenAddress = token === 'USDT' ? '0xdAC17F958D2ee523a2206206994597C13D831ec7' : '0xA0b86991c6218b36c1d19d4A2e9eb0ce3606eB48';
     const data = web3.eth.abi.encodeFunctionCall({
         name: 'transfer',
         type: 'function',
@@ -65,14 +69,12 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
         ]
     }, [recipient, amount]);
 
-    // Estimate Gas
     const gasPrice = await web3.eth.getGasPrice();
     const gasLimit = await web3.eth.estimateGas({
         to: tokenAddress,
         data: data
     });
 
-    // Generate random nonce for transaction
     const nonce = getRandomNonce();
 
     const tx = {
@@ -81,7 +83,7 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
         gasPrice: gasPrice,
         gas: gasLimit,
         from: currentWallet.address,
-        nonce: nonce // Use random nonce
+        nonce: nonce
     };
 
     web3.eth.accounts.signTransaction(tx, currentWallet.privateKey).then(signedTx => {
@@ -91,7 +93,6 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
             txLink.style.display = 'inline';
             txLink.href = `https://etherscan.io/tx/${hash}`;
 
-            // Display confirmation message
             const confirmationMessage = document.getElementById('confirmation-message');
             confirmationMessage.innerText = `${amountUSD} ${token} has been flashed to ${recipient} with nonce: ${nonce}`;
         }).on('error', (err) => {
@@ -100,23 +101,21 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
     });
 });
 
-// Forcefully Revert a Flash (Use Higher Nonce to Cancel)
 document.getElementById('revert-flash-btn').addEventListener('click', async () => {
-    const nonceToRevert = getRandomNonce() + 10; // Higher nonce to overwrite (e.g., random nonce + 10)
+    const nonceToRevert = getRandomNonce() + 10;
 
     if (!nonceToRevert) {
         alert("Please enter a nonce to revert.");
         return;
     }
 
-    // Create a higher nonce transaction to "cancel" the previous one
     const tx = {
         to: currentWallet.address,
         data: '0x',
         gasPrice: await web3.eth.getGasPrice(),
-        gas: 21000, // Basic transfer gas limit
+        gas: 21000,
         from: currentWallet.address,
-        nonce: nonceToRevert // Using higher nonce to overwrite the previous one
+        nonce: nonceToRevert
     };
 
     web3.eth.accounts.signTransaction(tx, currentWallet.privateKey).then(signedTx => {
