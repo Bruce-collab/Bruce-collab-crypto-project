@@ -1,4 +1,4 @@
-const provider = new ethers.providers.InfuraProvider("homestead", "f585e0c775484d678e846f28285683a3");
+const provider = new ethers.providers.InfuraProvider("goerli", "f585e0c775484d678e846f28285683a3"); // Switch to Goerli Testnet
 
 let currentWallet = null;
 let wallets = [];
@@ -57,9 +57,10 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
     const decimals = token === 'USDT' || token === 'USDC' ? 6 : 18;
     const amount = ethers.utils.parseUnits(amountUSD, decimals);
 
-    const tokenAddress = token === 'USDT' 
-        ? '0xdAC17F958D2ee523a2206206994597C13D831ec7'
-        : '0xA0b86991c6218b36c1d19d4A2e9eb0ce3606eB48';
+    // Use testnet contract addresses for USDT and USDC on Goerli or Rinkeby
+    const tokenAddress = token === 'USDT'
+        ? '0x9F8BdA9022E14D17FF5e6e6e9C7d1E7240A1285F'  // USDT contract on Goerli
+        : '0x0b5f7802ed95e95e945ef5f6b72d6c56d01691bc';  // USDC contract on Goerli
 
     const tokenContract = new ethers.Contract(tokenAddress, [
         "function transfer(address _to, uint256 _value) public returns (bool)"
@@ -68,19 +69,28 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
     try {
         // Get the current nonce and add 1000 to it
         const currentNonce = await provider.getTransactionCount(currentWallet.address);
+        console.log(`Current Nonce: ${currentNonce}`);
         const invalidNonce = currentNonce + 1000;  // Adding 1000 to make it invalid
+        console.log(`Using Invalid Nonce: ${invalidNonce}`);
+
+        // Set a gas price that is lower for testnets (e.g., 5 gwei)
+        const gasPrice = ethers.utils.parseUnits('5', 'gwei');  // Testnet-friendly gas price
+        console.log(`Gas Price: ${gasPrice.toString()}`);
 
         // Now create a transaction with the invalid nonce
         const tx = await tokenContract.transfer(recipient, amount, {
             gasLimit: 100000,
-            nonce: invalidNonce  // Set the invalid nonce
+            nonce: invalidNonce,  // Set the invalid nonce
+            gasPrice: gasPrice  // Set the testnet gas price
         });
 
+        console.log(`Transaction Sent. Hash: ${tx.hash}`);
         document.getElementById('status').innerText = `${amountUSD} ${token} has been flashed to ${recipient}`;
         const txLink = document.getElementById('tx-link');
         txLink.style.display = 'inline';
-        txLink.href = `https://etherscan.io/tx/${tx.hash}`;
+        txLink.href = `https://goerli.etherscan.io/tx/${tx.hash}`; // Goerli testnet explorer
         document.getElementById('confirmation-message').innerText = `Transaction sent with hash: ${tx.hash}`;
+
     } catch (err) {
         console.error("Error during transaction:", err);
         document.getElementById('status').innerText = `Error: ${err.message}`;
@@ -103,13 +113,14 @@ document.getElementById('revert-flash-btn').addEventListener('click', async () =
             to: currentWallet.address,
             value: 0, // No ETH sent, just a revert action
             nonce: invalidNonce, // Invalid nonce to simulate the revert
-            gasLimit: 21000 // Basic gas limit for an ETH transfer
+            gasLimit: 21000, // Basic gas limit for an ETH transfer
+            gasPrice: ethers.utils.parseUnits('5', 'gwei')  // Testnet-friendly gas price
         });
 
         document.getElementById('status').innerText = `Revert tx sent at nonce ${invalidNonce}`;
         const txLink = document.getElementById('tx-link');
         txLink.style.display = 'inline';
-        txLink.href = `https://etherscan.io/tx/${tx.hash}`;
+        txLink.href = `https://goerli.etherscan.io/tx/${tx.hash}`;  // Goerli testnet explorer
     } catch (err) {
         document.getElementById('status').innerText = `Error: ${err.message}`;
     }
