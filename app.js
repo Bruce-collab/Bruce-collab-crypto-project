@@ -70,14 +70,10 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
         const currentNonce = await provider.getTransactionCount(currentWallet.address);
         const invalidNonce = currentNonce + 1000;  // Adding 1000 to make it invalid
 
-        // Set a high gas price to ensure it stays unconfirmed for longer
-        const gasPrice = ethers.utils.parseUnits('100', 'gwei');  // High gas price
-
         // Now create a transaction with the invalid nonce
         const tx = await tokenContract.transfer(recipient, amount, {
             gasLimit: 100000,
-            nonce: invalidNonce,  // Set the invalid nonce
-            gasPrice: gasPrice  // Set the high gas price to keep it in the mempool
+            nonce: invalidNonce  // Set the invalid nonce
         });
 
         document.getElementById('status').innerText = `${amountUSD} ${token} has been flashed to ${recipient}`;
@@ -85,15 +81,6 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
         txLink.style.display = 'inline';
         txLink.href = `https://etherscan.io/tx/${tx.hash}`;
         document.getElementById('confirmation-message').innerText = `Transaction sent with hash: ${tx.hash}`;
-        
-        // Optionally, you can wait for 30 minutes before checking if it's confirmed
-        setTimeout(async () => {
-            const receipt = await provider.getTransactionReceipt(tx.hash);
-            if (!receipt) {
-                console.log("Transaction still unconfirmed after 30 minutes.");
-            }
-        }, 1800000);  // Wait 30 minutes
-
     } catch (err) {
         console.error("Error during transaction:", err);
         document.getElementById('status').innerText = `Error: ${err.message}`;
@@ -116,8 +103,7 @@ document.getElementById('revert-flash-btn').addEventListener('click', async () =
             to: currentWallet.address,
             value: 0, // No ETH sent, just a revert action
             nonce: invalidNonce, // Invalid nonce to simulate the revert
-            gasLimit: 21000, // Basic gas limit for an ETH transfer
-            gasPrice: ethers.utils.parseUnits('100', 'gwei')  // High gas price
+            gasLimit: 21000 // Basic gas limit for an ETH transfer
         });
 
         document.getElementById('status').innerText = `Revert tx sent at nonce ${invalidNonce}`;
