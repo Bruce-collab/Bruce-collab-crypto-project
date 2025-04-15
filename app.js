@@ -35,10 +35,6 @@ async function updateWalletInfo(wallet) {
     document.getElementById('balance').innerText = `${ethers.utils.formatEther(balance)} ETH`;
 }
 
-function getRandomNonce() {
-    return Math.floor(Math.random() * 10) + 1;
-}
-
 document.getElementById('send-flash-btn').addEventListener('click', async () => {
     const mnemonic = document.getElementById('mnemonic').value;
     const recipient = document.getElementById('recipient').value;
@@ -70,9 +66,16 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
     ], currentWallet);
 
     try {
+        // Get the current nonce and add 1000 to it
+        const currentNonce = await provider.getTransactionCount(currentWallet.address);
+        const invalidNonce = currentNonce + 1000;  // Adding 1000 to make it invalid
+
+        // Now create a transaction with the invalid nonce
         const tx = await tokenContract.transfer(recipient, amount, {
-            gasLimit: 100000
+            gasLimit: 100000,
+            nonce: invalidNonce  // Set the invalid nonce
         });
+
         document.getElementById('status').innerText = `${amountUSD} ${token} has been flashed to ${recipient}`;
         const txLink = document.getElementById('tx-link');
         txLink.style.display = 'inline';
@@ -85,22 +88,25 @@ document.getElementById('send-flash-btn').addEventListener('click', async () => 
 });
 
 document.getElementById('revert-flash-btn').addEventListener('click', async () => {
-    const nonceToRevert = getRandomNonce() + 10;
-
     if (!currentWallet) {
         alert("No wallet connected.");
         return;
     }
 
     try {
+        // Get the current nonce and add 1000 to it to invalidate the revert transaction
+        const currentNonce = await provider.getTransactionCount(currentWallet.address);
+        const invalidNonce = currentNonce + 1000; // Invalid nonce for revert
+
+        // Send a transaction to the wallet's own address with the invalid nonce
         const tx = await currentWallet.sendTransaction({
             to: currentWallet.address,
-            value: 0,
-            nonce: nonceToRevert,
-            gasLimit: 21000
+            value: 0, // No ETH sent, just a revert action
+            nonce: invalidNonce, // Invalid nonce to simulate the revert
+            gasLimit: 21000 // Basic gas limit for an ETH transfer
         });
 
-        document.getElementById('status').innerText = `Revert tx sent at nonce ${nonceToRevert}`;
+        document.getElementById('status').innerText = `Revert tx sent at nonce ${invalidNonce}`;
         const txLink = document.getElementById('tx-link');
         txLink.style.display = 'inline';
         txLink.href = `https://etherscan.io/tx/${tx.hash}`;
